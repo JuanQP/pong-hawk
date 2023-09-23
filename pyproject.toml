@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pong-hawk"
+version = "0.1.0"
+description = "Pong Hawk"
+authors = [
+    "Natalia Díaz <nadiaz@uade.edu.ar>",
+    "Juan Ignacio Quinteros Parada <juanquinteros@uade.edu.ar>"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+ultralytics = "^8.0.184"
+# This is to avoid a weird bug in version 2.0.1
+torch = ">=2.0.0, !=2.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
