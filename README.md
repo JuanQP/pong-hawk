@@ -2,6 +2,8 @@
 
 👷‍♂️ This project is still under development 👷‍♀️
 
+![ezgif com-video-to-gif(1)](https://github.com/JuanQP/pong-hawk/assets/11776905/ba0b4514-b180-4d29-90a3-5af1102747bb)
+
 # Development
 
 You need the `trained_model.pt` file in the `model` folder and `poetry` installed in order to execute this project. Then:
