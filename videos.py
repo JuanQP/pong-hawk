@@ -29,6 +29,7 @@ video = cv2.VideoCapture(f"{VIDEOS_FOLDER}/{video_filename}")
 width = round(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = round(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = round(video.get(cv2.CAP_PROP_FPS), 1)
+frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
 SCREEN_CENTER = center((0, 0), (width, height))
 
@@ -41,7 +42,7 @@ exported_video = cv2.VideoWriter(
 
 print("")
 print("Pong Hawk - Group 33 - Video Processing")
-print(f"Processing {video_filename} ({width}x{height}@{fps}fps)")
+print(f"🛠️  Processing {video_filename} ({width}x{height}@{fps}fps)")
 
 processed_frames = 0
 previous_ball_positions = []
@@ -104,8 +105,16 @@ while True:
     processed_frames += 1
 
     if processed_frames % fps == 0:
-        print(f"{processed_frames / fps} seconds processed...")
+        print("", end="\r")
+        print(
+            f"⏳ {round((processed_frames / frame_count)*100)}% processed",
+            end="",
+            flush=True,
+        )
 
+print("", end="\r")
+print(f"✅ 100% processed")
+print("Done!")
 video.release()
 exported_video.release()
 cv2.destroyAllWindows()
