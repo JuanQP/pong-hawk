@@ -5,12 +5,12 @@ import torch
 
 from utilities import (
     IMAGES_FOLDER,
-    MAX_AMOUNTS,
     MODEL_PATH,
     PROCESSED_FILE_SUFFIX,
+    center,
     draw_detection,
     image_to_rgb,
-    to_detection,
+    process_detection,
 )
 
 # Load model
@@ -32,18 +32,29 @@ for image_path in image_files:
         print(f"Looks like {image_path} is not an image... Skipping...")
         continue
 
-    # Initialize detections in current image
-    detections_by_type = {object_name: 0 for object_name in MAX_AMOUNTS.keys()}
-    image_rgb = image_to_rgb(image)
-    result = model(image_rgb)
-    detections = result.pandas().xyxy[0]
+    rgb_frame = image_to_rgb(image)
+    result = model(rgb_frame)
+    image_center = center((0, 0), image.shape[:2])
 
-    # Iterate over the detections in current image
-    for i in detections.index:
-        detection = to_detection(detections.iloc[i])
-        detection_name = detection["name"]
-        detections_by_type[detection_name] += 1
-        draw_detection(image, detections_by_type, detection)
+    processed_detections = process_detection(result, image_center)
+
+    table = processed_detections["table"]
+    if table is not None:
+        draw_detection(image, table)
+
+    web = processed_detections["web"]
+    if web is not None:
+        draw_detection(image, web)
+
+    for paddle in processed_detections["paddles"]:
+        draw_detection(image, paddle)
+
+    for player in processed_detections["players"]:
+        draw_detection(image, player)
+
+    ball = processed_detections["closest_ball"]
+    if ball is not None:
+        draw_detection(image, ball)
 
     # Export image with all detections drawn on it
     processed_image_filename = f"{PROCESSED_FILE_SUFFIX}{image_path}"

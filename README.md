@@ -21,4 +21,4 @@ poetry run python videos.py
 
 Depending on which command you used, it will process the `images` folder or the `videos` folder and then export the results with the `pong-hawk-` suffix in the file name.
 
-In case of processing images, it will process every single image in that directory, but in the case of videos it will process the one you choose in the variable `VIDEO_FILENAME` in `videos.py`
+In case of processing images, it will process every single image in that directory, but in the case of videos a prompt will appear asking you which file you want to process.

@@ -1,33 +1,55 @@
 import cv2
+import os
 import torch
 
-from utilities import (COLORS, MAX_AMOUNTS, MODEL_PATH, PROCESSED_FILE_SUFFIX,
-                       VIDEOS_FOLDER, image_to_rgb)
-from utilities.videos import (ACTIVE_PLAYER_COLORS, RAINBOW_COLORS, center,
-                              distance, draw_text)
+from utilities import (
+    MODEL_PATH,
+    PROCESSED_FILE_SUFFIX,
+    RAINBOW_COLORS,
+    VIDEOS_FOLDER,
+    center,
+    draw_detection,
+    image_to_rgb,
+    process_detection,
+)
 
-model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_PATH)
+model = torch.hub.load("ultralytics/yolov5", "custom", path=MODEL_PATH)
 model.conf = 0.4
 
 # Set this variable with the video name in your videos folder!
-VIDEO_FILENAME = "some_filename_in_videos_folder.mp4"
+files_in_videos_folder = os.listdir(VIDEOS_FOLDER)
+print("Files in videos folder:")
+print(files_in_videos_folder)
+video_filename = input("Video file name (example 'test1.mp4'): ")
 
-video = cv2.VideoCapture(f"{VIDEOS_FOLDER}/{VIDEO_FILENAME}")
-width, height, fps = 1280, 720, 25.0
-SCREEN_CENTER = center((0,0), (width, height))
-last_table_position = SCREEN_CENTER
+if video_filename not in files_in_videos_folder:
+    raise RuntimeError(f"File '{video_filename}' does not exist in videos folder")
+
+video = cv2.VideoCapture(f"{VIDEOS_FOLDER}/{video_filename}")
+width = round(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = round(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = round(video.get(cv2.CAP_PROP_FPS), 1)
+
+SCREEN_CENTER = center((0, 0), (width, height))
 
 exported_video = cv2.VideoWriter(
-    f"{VIDEOS_FOLDER}/{PROCESSED_FILE_SUFFIX}{VIDEO_FILENAME}",
+    f"{VIDEOS_FOLDER}/{PROCESSED_FILE_SUFFIX}{video_filename}",
     cv2.VideoWriter_fourcc(*"mp4v"),
     fps,
     (width, height),
 )
 
+print("")
+print("Pong Hawk - Group 33 - Video Processing")
+print(f"Processing {video_filename} ({width}x{height}@{fps}fps)")
+
 processed_frames = 0
 previous_ball_positions = []
-# Default value...
-is_upper_player_playing = True
+# Default values...
+last_table_position = SCREEN_CENTER
+is_upper_player_playing = None
+
+# Start processing
 while True:
     continues, frame = video.read()
 
@@ -37,73 +59,48 @@ while True:
     rgb_frame = image_to_rgb(frame)
     result = model(rgb_frame)
 
-    detected_objects = result.pandas().xyxy[0]
-    object_count = {object_name: 0 for object_name in MAX_AMOUNTS.keys()}
-    ball_rectangle_positions = []
-    player_positions = []
+    processed_detections = process_detection(
+        result, last_table_position, is_upper_player_playing
+    )
 
-    for i in detected_objects.index:
-        object_name = detected_objects['name'][i]
-        object_count[object_name] += 1
-        max_count_exceeded = object_count[object_name] > MAX_AMOUNTS[object_name]
+    table = processed_detections["table"]
+    if table is not None:
+        last_table_position = center(table["start"], table["end"])
+        draw_detection(frame, table)
 
-        if max_count_exceeded and object_name != 'pelota':
-            continue
+    web = processed_detections["web"]
+    if web is not None:
+        draw_detection(frame, web)
 
-        confidence = detected_objects['confidence'][i]
-        start_point = int(detected_objects['xmin'][i]), int(detected_objects['ymin'][i])
-        end_point = int(detected_objects['xmax'][i]), int(detected_objects['ymax'][i])
-        label = f"{object_name} {round(confidence * 100)}%"
+    for paddle in processed_detections["paddles"]:
+        draw_detection(frame, paddle)
 
-        if object_name == 'jugador':
-            player_positions.append((start_point, end_point, label))
-            continue
-        elif object_name == 'mesa':
-            last_table_position = center(start_point, end_point)
-        elif object_name == 'pelota':
-            ball_rectangle_positions.append((start_point, end_point))
-            continue
+    for player in processed_detections["players"]:
+        draw_detection(frame, player)
 
-
-        colors = COLORS[object_name]
-        border_color = colors['background']
-
-        # Rectangle
-        cv2.rectangle(frame, start_point, end_point, border_color, 1)
-        draw_text(label, start_point, colors, frame)
-
-    closest_ball = None
-    if len(ball_rectangle_positions) > 0:
-        # Find the closest ball to the table
-        closest_ball = min(
-            ball_rectangle_positions,
-            key=lambda p: distance(last_table_position, center(p[0], p[1]))
+    ball = processed_detections["closest_ball"]
+    if ball is not None:
+        previous_ball_positions.append(ball)
+        is_upper_player_playing = (
+            center(ball["start"], ball["end"])[1] < last_table_position[1]
         )
-        previous_ball_positions.append(closest_ball)
-        cv2.rectangle(frame, closest_ball[0], closest_ball[1], COLORS['pelota']['background'], 1)
-        draw_text('pelota', closest_ball[0], COLORS['pelota'], frame)
+        draw_detection(frame, ball)
 
+    # Draw a rainbow trail
     extra_radius = 0
-    for i, dot in enumerate(previous_ball_positions[-7:]):
+    for i, ball in enumerate(previous_ball_positions[-7:]):
+        # Make more recent dots larger
         extra_radius = i // 3
         dot_color = RAINBOW_COLORS[i]
-        cv2.circle(frame, center(dot[0], dot[1]), radius=2 + extra_radius, color=dot_color, thickness=-1)
+        cv2.circle(
+            frame,
+            center(ball["start"], ball["end"]),
+            radius=2 + extra_radius,
+            color=dot_color,
+            thickness=-1,
+        )
 
-    if len(previous_ball_positions) > 0:
-        last_ball_position = center(previous_ball_positions[-1][0], previous_ball_positions[-1][1])
-        is_upper_player_playing = last_ball_position[1] > last_table_position[1]
-
-    for start, end, label in player_positions:
-        player_position = center(start, end)
-        is_upper_player = player_position[1] > last_table_position[1]
-        player_color = ACTIVE_PLAYER_COLORS \
-            if (is_upper_player and is_upper_player_playing) or (not is_upper_player and not is_upper_player_playing) \
-            else COLORS['jugador']
-        cv2.rectangle(frame, start, end, player_color['background'], 1)
-        draw_text(label, start, player_color, frame)
-
-    processed_frame = frame
-    exported_video.write(processed_frame)
+    exported_video.write(frame)
     processed_frames += 1
 
     if processed_frames % fps == 0:
