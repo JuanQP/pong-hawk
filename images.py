@@ -56,6 +56,26 @@ for image_path in image_files:
     if ball is not None:
         draw_detection(image, ball)
 
+    # Draw boundaries
+    left_boundary = processed_detections["boundaries"][0]
+    right_boundary = processed_detections["boundaries"][1]
+    image_height = image.shape[1]
+
+    cv2.line(
+        image,
+        (left_boundary, 0),
+        (left_boundary, image_height),
+        color=(0, 0, 0),
+        thickness=1,
+    )
+    cv2.line(
+        image,
+        (right_boundary, 0),
+        (right_boundary, image_height),
+        color=(0, 0, 0),
+        thickness=1,
+    )
+
     # Export image with all detections drawn on it
     processed_image_filename = f"{PROCESSED_FILE_SUFFIX}{image_path}"
     cv2.imwrite(f"{IMAGES_FOLDER}/{processed_image_filename}", image)

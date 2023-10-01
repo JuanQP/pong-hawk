@@ -101,6 +101,26 @@ while True:
             thickness=-1,
         )
 
+    # Draw boundaries
+    left_boundary = processed_detections["boundaries"][0]
+    right_boundary = processed_detections["boundaries"][1]
+    image_height = frame.shape[1]
+    cv2.line(
+        frame,
+        (left_boundary, 0),
+        (left_boundary, image_height),
+        color=(0, 0, 0),
+        thickness=1,
+    )
+    cv2.line(
+        frame,
+        (right_boundary, 0),
+        (right_boundary, image_height),
+        color=(0, 0, 0),
+        thickness=1,
+    )
+
+    # Export the image!
     exported_video.write(frame)
     processed_frames += 1
 

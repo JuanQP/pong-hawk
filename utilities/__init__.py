@@ -64,6 +64,15 @@ def distance(p1, p2):
     return math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
 
 
+def is_contained(
+    thing: tuple[tuple[int, int], tuple[int, int]],
+    container_boundaries: tuple[int, int],
+):
+    start_x = thing[0][0]
+    end_x = thing[1][0]
+    return start_x > container_boundaries[0] and end_x < container_boundaries[1]
+
+
 def image_to_rgb(image):
     return image[..., ::-1]
 
@@ -131,6 +140,7 @@ def process_detection(
     web = None
     paddles = []
     table = None
+    things = []
 
     # Detections in current frame
     for i in detections.index:
@@ -145,29 +155,55 @@ def process_detection(
 
         if object_name == "jugador":
             players.append(detection)
+            things.append(detection)
         elif object_name == "mesa":
             table = detection
+            things.append(detection)
         elif object_name == "pelota":
             balls.append(detection)
         elif object_name == "red":
             web = detection
+            things.append(detection)
         else:
             paddles.append(detection)
+
+    # Area of interest
+    x_left_boundary = min(things, key=lambda thing: thing["start"][0], default=None)
+    x_right_boundary = max(things, key=lambda thing: thing["end"][0], default=None)
+
+    x_left_boundary = x_left_boundary["start"][0] if x_left_boundary else 0
+    x_right_boundary = x_right_boundary["end"][0] if x_right_boundary else 9999
 
     # Update last_table_position if table was found
     if table is not None:
         last_table_position = center(table["start"], table["end"])
 
+    # Paddles can only exist between cointainer boundaries
+    paddles = filter(
+        lambda paddle: is_contained(
+            (paddle["start"], paddle["end"]), (x_left_boundary, x_right_boundary)
+        ),
+        paddles,
+    )
+
     # If there where multiple detections of the ball
     # we need to do something about that...
     closest_ball = None
     if len(balls) > 0:
+        # Filter out balls out of area of interest
+        balls = filter(
+            lambda ball: is_contained(
+                (ball["start"], ball["end"]), (x_left_boundary, x_right_boundary)
+            ),
+            balls,
+        )
         # Find the closest ball to the table
         closest_ball = min(
             balls,
             key=lambda ball: distance(
                 last_table_position, center(ball["start"], ball["end"])
             ),
+            default=None,
         )
 
     # Check if is_upper_player_playing
@@ -195,10 +231,11 @@ def process_detection(
             player["colors"] = ACTIVE_PLAYER_COLORS
 
     return {
-        "balls": balls,
+        "balls": list(balls),
         "closest_ball": closest_ball,
-        "paddles": paddles,
+        "paddles": list(paddles),
         "players": players,
         "table": table,
         "web": web,
+        "boundaries": (x_left_boundary, x_right_boundary),
     }
