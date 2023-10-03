@@ -1,6 +1,7 @@
 import os
 
 import cv2
+import numpy as np
 import torch
 
 from utilities import (
@@ -8,8 +9,7 @@ from utilities import (
     MODEL_PATH,
     PROCESSED_FILE_SUFFIX,
     center,
-    draw_detection,
-    image_to_rgb,
+    debug_draw,
     process_detection,
 )
 
@@ -22,6 +22,8 @@ print("")
 print("Pong Hawk - Group 33 - Image Processing")
 print("The next files will be processed:", image_files)
 
+alpha = 0.2
+
 for image_path in image_files:
     if image_path.startswith(PROCESSED_FILE_SUFFIX):
         print(f"Looks like {image_path} is already a processed image... Skipping...")
@@ -32,49 +34,13 @@ for image_path in image_files:
         print(f"Looks like {image_path} is not an image... Skipping...")
         continue
 
-    rgb_frame = image_to_rgb(image)
-    result = model(rgb_frame)
+    result = model(image)
     image_center = center((0, 0), image.shape[:2])
 
     processed_detections = process_detection(result, image_center)
 
-    table = processed_detections["table"]
-    if table is not None:
-        draw_detection(image, table)
-
-    web = processed_detections["web"]
-    if web is not None:
-        draw_detection(image, web)
-
-    for paddle in processed_detections["paddles"]:
-        draw_detection(image, paddle)
-
-    for player in processed_detections["players"]:
-        draw_detection(image, player)
-
-    ball = processed_detections["closest_ball"]
-    if ball is not None:
-        draw_detection(image, ball)
-
-    # Draw boundaries
-    left_boundary = processed_detections["boundaries"][0]
-    right_boundary = processed_detections["boundaries"][1]
-    image_height = image.shape[1]
-
-    cv2.line(
-        image,
-        (left_boundary, 0),
-        (left_boundary, image_height),
-        color=(0, 0, 0),
-        thickness=1,
-    )
-    cv2.line(
-        image,
-        (right_boundary, 0),
-        (right_boundary, image_height),
-        color=(0, 0, 0),
-        thickness=1,
-    )
+    # Draw everything on image
+    debug_draw(processed_detections, image)
 
     # Export image with all detections drawn on it
     processed_image_filename = f"{PROCESSED_FILE_SUFFIX}{image_path}"

@@ -1,5 +1,8 @@
 import cv2
 import math
+import numpy as np
+
+ALPHA = 0.2
 
 ACTIVE_PLAYER_COLORS = {
     "text": (0, 0, 0),
@@ -49,7 +52,7 @@ MAX_AMOUNTS = {
     "red": 1,
 }
 MODEL_PATH = "model/trained_model.pt"
-PROCESSED_FILE_SUFFIX = "pong-hawk-"
+PROCESSED_FILE_SUFFIX = "pong-hawk"
 VIDEOS_FOLDER = "videos"
 
 
@@ -239,3 +242,44 @@ def process_detection(
         "web": web,
         "boundaries": (x_left_boundary, x_right_boundary),
     }
+
+
+def debug_draw(detections, frame):
+    """Draw everything on frame"""
+    table = detections["table"]
+    if table is not None:
+        draw_detection(frame, table)
+
+    web = detections["web"]
+    if web is not None:
+        draw_detection(frame, web)
+
+    for paddle in detections["paddles"]:
+        draw_detection(frame, paddle)
+
+    for player in detections["players"]:
+        draw_detection(frame, player)
+
+    ball = detections["closest_ball"]
+    if ball is not None:
+        draw_detection(frame, ball)
+
+    # Draw boundaries
+    left_boundary = detections["boundaries"][0]
+    right_boundary = detections["boundaries"][1]
+    image_height = frame.shape[0]
+    image_width = frame.shape[1]
+
+    # Draw left gray rectangle
+    x, y, w, h = 0, 0, left_boundary, image_height
+    sub_img = frame[y : y + h, x : x + w]
+    black_rectangle = np.zeros(sub_img.shape, dtype=np.uint8)
+    res = cv2.addWeighted(sub_img, 1 - ALPHA, black_rectangle, ALPHA, 0)
+    frame[y : y + h, x : x + w] = res
+
+    # Draw right gray rectangle
+    x, y, w, h = right_boundary, 0, image_width - right_boundary, image_height
+    sub_img = frame[y : y + h, x : x + w]
+    black_rectangle = np.zeros(sub_img.shape, dtype=np.uint8)
+    res = cv2.addWeighted(sub_img, 1 - ALPHA, black_rectangle, ALPHA, 0)
+    frame[y : y + h, x : x + w] = res
