@@ -2,7 +2,9 @@
 
 👷‍♂️ This project is still under development 👷‍♀️
 
-![ezgif com-video-to-gif(1)](https://github.com/JuanQP/pong-hawk/assets/11776905/ba0b4514-b180-4d29-90a3-5af1102747bb)
+![pong-hawk-debug](https://github.com/JuanQP/pong-hawk/assets/11776905/e80f22fa-535a-4f0e-8b23-78a9b16ab327)
+
+![pong-hawk-heatmap](https://github.com/JuanQP/pong-hawk/assets/11776905/efccdac2-0231-4d2e-a51b-7f9982a55488)
 
 # Development
 
